@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Implemented high-precision compound interest simulation calculations in `Simulator.cs` under `src/CompoundWealthSimulator`.
+- Introduced strong-typed contracts: `Frequency` enum, `SimulationParameters` record, and `ProjectionRow` struct.
+- Established strict input parameter validations (Principal, Contribution, Frequency, AnnualInterestRate, DurationYears) with sequential ArgumentException precedence checks.
+- Created `ISimulator` interface guaranteeing high-precision iterative compounding computations (without float-based precision drift).
+
+### Changed
 - Scaffolding of the core solution structure in `CompoundWealthSimulator.sln`.
 - Created executable CLI application project skeleton targeting `net10.0`.
 - Integrated `CommandLineParser` package dependencies (v2.9.1) within production target.

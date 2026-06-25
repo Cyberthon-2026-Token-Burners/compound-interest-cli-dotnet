@@ -1,9 +1,11 @@
 # Compound Wealth Simulator
 
-A .NET CLI tool for retail clients to simulate long-term wealth growth by projecting how initial savings compound over time based on flexible deposit intervals. The utility accepts basic financial input parameters and outputs a clean projection statement showing the final accumulated balance.
+A high-precision .NET CLI tool for retail clients to simulate long-term wealth growth by projecting how initial savings compound over time based on flexible deposit intervals. The utility accepts basic financial input parameters from a user and returns a clean projection statement showing the final accumulated balance.
 
 ## Features
-- Buildable .NET 10 scaffolding for CLI-driven execution.
+- High-precision compounding calculations utilizing .NET `decimal` types to eliminate rounding errors.
+- Flexible contribution frequencies supporting monthly, quarterly, and annual intervals.
+- Built-in validation rules enforcing realistic guardrails on principal, interest rate, contributions, and timeline limits.
 - Configured Solution integration tying CLI tool application and testing suites together seamlessly.
 - Structured build diagnostics focusing on high-integrity compiled output with warning-as-error controls.
 
@@ -17,7 +19,7 @@ A .NET CLI tool for retail clients to simulate long-term wealth growth by projec
 ## Getting Started
 
 ### Prerequisites
-- .NET 10 SDK
+- .NET 10.0 SDK
 
 ### Installation & Build
 ```sh
