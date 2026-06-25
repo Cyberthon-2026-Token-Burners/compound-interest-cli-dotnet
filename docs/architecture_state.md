@@ -5,6 +5,7 @@
 
 ## Active Components
 - **CompoundWealthSimulator CLI Application (`src/CompoundWealthSimulator`)**: Main entry point and CLI driver. Compiles as an executable targeting `net10.0`. Uses `CommandLineParser` to consume client parameters.
+- **High-Precision Simulator Core**: Responsible for validating financial simulation parameters and executing iterative, stateless compound interest math with no floating-point representation drift. Implemented in `Simulator.cs`.
 - **CompoundWealthSimulator.Tests Suite (`tests/CompoundWealthSimulator.Tests`)**: Testing framework utilizing `xunit` targeting `net10.0` to assert wealth compound computations, argument parsing correctness, and final projections.
 
 ## Public Interfaces / Signatures
@@ -15,12 +16,27 @@
   - **Inputs**: CLI argument collection.
   - **Outputs**: Integer exit status. Returns `0` on successful execution, other status values representing computational or input parsing errors.
 
+### Core Computational Contracts
+- **Namespace**: `CompoundWealthSimulator`
+- **Types**:
+  - `public enum Frequency`: Enumerates support for `Monthly = 12`, `Quarterly = 4`, and `Annually = 1` contribution intervals.
+  - `public record SimulationParameters(decimal Principal, decimal Contribution, Frequency ContributionFrequency, decimal AnnualInterestRate, int DurationYears)`: Strong type representing the input state.
+  - `public struct ProjectionRow`: Represents yearly milestones containing `Year` (int), `TotalContributions` (decimal), `CumulativeInterest` (decimal), and `EndBalance` (decimal).
+  - `public interface ISimulator`:
+    ```csharp
+    System.Collections.Generic.List<ProjectionRow> Project(SimulationParameters parameters);
+    ```
+  - `public class Simulator`: Concrete stateless implementation of `ISimulator`.
+
 ## Design Patterns
+- **Stateless Domain Simulator**: The computational engine (`Simulator`) is fully pure and side-effect free, yielding deterministic predictions based on math standards.
 - **CLI Shell Pattern**: Isolates interaction logic to the shell (`CommandLineParser`) and ensures computations are driven cleanly through strongly typed domain properties.
+- **Sequential Validation Precedence**: Order-dependent validations enforce strict preconditions on parameters (Principal -> Contribution -> Rate -> Duration) throwing standard exceptions.
 - **Project Structure Separation**: Main domain and application logic is located under `src/` to isolate production shipping code from standard testing configurations under `tests/`.
 
 ## Non-Functional Invariants
-- **Platform Integrity**: Targets the modern `.NET 10.0` SDK environment exclusively.
-- **Strict Diagnostics**: Configured with `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<Nullable>enable</Nullable>` to ensure complete codebase type-safety and eliminate compilation regressions early.
-- **No Unused Package References**: System relies on pure standard-library features combined with version-pinned core packages (`CommandLineParser`, `xunit`, `Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio`). Avoids raw frame package pinning.
-- **Standard Layout**: The root solution `CompoundWealthSimulator.sln` tracks and coordinates compilation pipelines across both source and test directories.
+- **High-Precision Currency Representation**: Must exclusively use the C# standard `decimal` primitive for all currency and interest metrics, avoiding floating-point or binary exponentiation (`double`/`Math.Pow`) rounding drift.
+- **Performance Constraints**: Simulator calculations must maintain execution latency under 50 milliseconds for up to a 100-year projection horizon.
+- **Platform Integrity**: Targets the modern `.NET 10.0` SDK environment exclusively with `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<Nullable>enable</Nullable>`.
+- **Memory Profile Safety**: Process maximum working-set memory under active simulation execution must remain strictly below 30 Megabytes.
+- **Zero-Duration Safety**: Short-circuit return of an empty row set if `DurationYears` is 0, skipping loop allocation metrics completely.
