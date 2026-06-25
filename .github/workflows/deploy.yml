@@ -1,0 +1,98 @@
+name: CI/CD Release Workflow
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: |
+          for i in 1 2 3; do dotnet restore --disable-parallel && exit 0; sleep 5; done; exit 1
+
+      - name: Run Lint
+        run: |
+          ws=$(ls *.slnx *.sln 2>/dev/null | head -n1); ws=${ws:-$(ls *.csproj 2>/dev/null | head -n1)}; if [ -z "$ws" ]; then echo 'no .slnx/.sln/.csproj at repo root — nothing to verify'; exit 0; fi; dotnet format "$ws" --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build
+
+      - name: Test
+        run: dotnet test
+
+  release:
+    needs: test-and-lint
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish for Windows (x64)
+        run: dotnet publish src/CompoundWealthSimulator/CompoundWealthSimulator.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish/win-x64
+
+      - name: Publish for Linux (x64)
+        run: dotnet publish src/CompoundWealthSimulator/CompoundWealthSimulator.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -o ./publish/linux-x64
+
+      - name: Publish for macOS (x64)
+        run: dotnet publish src/CompoundWealthSimulator/CompoundWealthSimulator.csproj -c Release -r osx-x64 --self-contained true -p:PublishSingleFile=true -o ./publish/osx-x64
+
+      - name: Package artifacts
+        run: |
+          cd publish/win-x64 && zip -r ../../CompoundWealthSimulator-win-x64.zip . && cd ../..
+          cd publish/linux-x64 && tar -czf ../../CompoundWealthSimulator-linux-x64.tar.gz . && cd ../..
+          cd publish/osx-x64 && tar -czf ../../CompoundWealthSimulator-osx-x64.tar.gz . && cd ../..
+
+      - name: Create GitHub Release
+        id: release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            CompoundWealthSimulator-win-x64.zip
+            CompoundWealthSimulator-linux-x64.tar.gz
+            CompoundWealthSimulator-osx-x64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update README with release URL
+        run: |
+          RELEASE_URL="${{ steps.release.outputs.url }}"
+          perl -i -0pe \
+            "s|<!-- RELEASE_URL_START -->.*?<!-- RELEASE_URL_END -->|<!-- RELEASE_URL_START -->\n**Latest release:** [$RELEASE_URL]($RELEASE_URL)\n<!-- RELEASE_URL_END -->|s" \
+            README.md || true
+          if ! grep -q "RELEASE_URL_START" README.md; then
+            printf '\n## 📦 Latest Release\n<!-- RELEASE_URL_START -->\n**Latest release:** [%s](%s)\n<!-- RELEASE_URL_END -->\n' \
+              "$RELEASE_URL" "$RELEASE_URL" >> README.md
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --exit-code README.md || \
+            (git add README.md && \
+             git commit -m "docs: update latest release URL [skip ci]" && \
+             git push)
