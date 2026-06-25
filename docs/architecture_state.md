@@ -6,6 +6,7 @@
 ## Active Components
 - **CompoundWealthSimulator CLI Application (`src/CompoundWealthSimulator`)**: Main entry point and CLI driver. Compiles as an executable targeting `net10.0`. Uses `CommandLineParser` to consume client parameters.
 - **High-Precision Simulator Core**: Responsible for validating financial simulation parameters and executing iterative, stateless compound interest math with no floating-point representation drift. Implemented in `Simulator.cs`.
+- **Output Formatter Component**: Implements ASCII tabular data alignment. Uses invariant-culture dollar-prefixed layouts, guaranteeing deterministic output visual grids. Implemented in `OutputFormatter.cs`.
 - **CompoundWealthSimulator.Tests Suite (`tests/CompoundWealthSimulator.Tests`)**: Testing framework utilizing `xunit` targeting `net10.0` to assert wealth compound computations, argument parsing correctness, and final projections.
 
 ## Public Interfaces / Signatures
@@ -28,14 +29,27 @@
     ```
   - `public class Simulator`: Concrete stateless implementation of `ISimulator`.
 
+### Output Formatting Contracts
+- **Namespace**: `CompoundWealthSimulator`
+- **Types**:
+  - `public interface IOutputFormatter`:
+    ```csharp
+    string FormatTable(System.Collections.Generic.List<ProjectionRow> rows);
+    ```
+  - `public class OutputFormatter`: Concrete stateless implementation of `IOutputFormatter`.
+
 ## Design Patterns
 - **Stateless Domain Simulator**: The computational engine (`Simulator`) is fully pure and side-effect free, yielding deterministic predictions based on math standards.
+- **Separation of Presentation Concerns**: Output formatting is decoupled from core math logic. `OutputFormatter` consumes calculated projections and formats them independently.
 - **CLI Shell Pattern**: Isolates interaction logic to the shell (`CommandLineParser`) and ensures computations are driven cleanly through strongly typed domain properties.
 - **Sequential Validation Precedence**: Order-dependent validations enforce strict preconditions on parameters (Principal -> Contribution -> Rate -> Duration) throwing standard exceptions.
 - **Project Structure Separation**: Main domain and application logic is located under `src/` to isolate production shipping code from standard testing configurations under `tests/`.
 
 ## Non-Functional Invariants
 - **High-Precision Currency Representation**: Must exclusively use the C# standard `decimal` primitive for all currency and interest metrics, avoiding floating-point or binary exponentiation (`double`/`Math.Pow`) rounding drift.
+- **Monochrome Terminal Consistency**: The presentation layer is strictly monochrome with no non-standard terminal escape codes.
+- **Invariant Culture Alignment**: Every decimal conversion leverages `System.Globalization.CultureInfo.InvariantCulture` explicitly to prevent regional system environment settings from disrupting cell formatting width alignment or using commas instead of dots as decimal separators.
+- **Exact Spacing and Padding**: Output tables adhere to strict pipe-separated structure and right-aligned widths: Col 1 (`Year`) width 4, Col 2 (`Total Contributions`) width 19, Col 3 (`Cumulative Interest`) width 19, and Col 4 (`End Balance`) width 19.
 - **Performance Constraints**: Simulator calculations must maintain execution latency under 50 milliseconds for up to a 100-year projection horizon.
 - **Platform Integrity**: Targets the modern `.NET 10.0` SDK environment exclusively with `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` and `<Nullable>enable</Nullable>`.
 - **Memory Profile Safety**: Process maximum working-set memory under active simulation execution must remain strictly below 30 Megabytes.

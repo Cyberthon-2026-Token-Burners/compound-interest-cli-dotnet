@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Implemented standard ASCII tabular output formatter (`IOutputFormatter` and `OutputFormatter` in `src/CompoundWealthSimulator/OutputFormatter.cs`).
+- Formatted numerical values with exactly two decimal places, thousands separators, invariant culture, and a dollar prefix (`$`).
+- Configured right-aligned space padding per column (width 4 for Year, width 19 for other columns) with standard pipe-separated separators.
+- Covered empty list outputs and null validation safety via throwing standard `ArgumentNullException`.
+
+### Added (Previous)
 - Implemented high-precision compound interest simulation calculations in `Simulator.cs` under `src/CompoundWealthSimulator`.
 - Introduced strong-typed contracts: `Frequency` enum, `SimulationParameters` record, and `ProjectionRow` struct.
 - Established strict input parameter validations (Principal, Contribution, Frequency, AnnualInterestRate, DurationYears) with sequential ArgumentException precedence checks.
